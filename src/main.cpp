@@ -12,6 +12,7 @@
 
 #include <string> 
 #include "Agent.h"
+#include "HelpClass.h"
 
 const int screenWidth = 1600;
 const int screenHeight = 800;
@@ -32,7 +33,7 @@ void moveShape() {
 }
 
 void drawShape() {
-    DrawCircle(agent->pos_x, agent->pos_y, agent->_radius, GREEN);
+    DrawCircle(agent->position.x, agent->position.y, agent->radius, GREEN);
 }
 
 int main(void)
@@ -40,6 +41,7 @@ int main(void)
     InitWindow(screenWidth, screenHeight, "AI Steering Project");
     SetTargetFPS(60);
     instantiateVariables();
+    HelperFunctions hf;
 
     while (!WindowShouldClose())
     {
@@ -48,6 +50,7 @@ int main(void)
         DrawText(TextFormat("FPS: %d", GetFPS()), 10, 10, 20, RED);
         moveShape();
         drawShape();
+        hf.drawOptions(agent->_currentBehavior);
         EndDrawing();
     }
 
