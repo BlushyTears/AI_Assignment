@@ -13,6 +13,7 @@
 #include <string> 
 #include "Agent.h"
 #include "HelpClass.h"
+#include "Player.h"
 
 const int screenWidth = 1600;
 const int screenHeight = 800;
@@ -20,25 +21,27 @@ const int squareSize = (screenWidth + screenHeight) / 20;
 
 using namespace std;
 Agent* agent;
+Player* player;
 
 void instantiateVariables() {
-    agent = new Agent(screenWidth / 2, screenWidth / 6, 25, 5.0f);
-}
-
-void moveShape() {
-    if (IsKeyDown(KEY_W)) agent->Move(0,-1);
-    if (IsKeyDown(KEY_A)) agent->Move(-1, 0);
-    if (IsKeyDown(KEY_S)) agent->Move(0, 1);
-    if (IsKeyDown(KEY_D)) agent->Move(1, 0);
+    agent = new Agent(Vector2{ screenWidth / 2, screenWidth / 6 }, 25.0f, 7.0f);
+    player = new Player(Vector2{screenWidth / 2, screenWidth / 2}, 25.0f, 8.0f);
 }
 
 void drawShape() {
-    DrawCircle(agent->position.x, agent->position.y, agent->radius, GREEN);
+    DrawCircle(player->position.x, player->position.y, player->radius, BLUE);
+}
+
+void MovePlayer() {
+    if (IsKeyDown(KEY_W)) player->Move(0, -1);
+    if (IsKeyDown(KEY_A)) player->Move(-1, 0);
+    if (IsKeyDown(KEY_S)) player->Move(0, 1);
+    if (IsKeyDown(KEY_D)) player->Move(1, 0);
 }
 
 int main(void)
 {
-    InitWindow(screenWidth, screenHeight, "AI Steering Project");
+    InitWindow(screenWidth, screenHeight, "AI Assignment");
     SetTargetFPS(60);
     instantiateVariables();
     HelperFunctions hf;
@@ -48,8 +51,14 @@ int main(void)
         BeginDrawing();
         ClearBackground(BLACK);
         DrawText(TextFormat("FPS: %d", GetFPS()), 10, 10, 20, RED);
-        moveShape();
+        agent->setBehavior();
+        agent->updateTarget(player);
+        agent->TryToChangeState();
+        agent->updateBehavior();
+        agent->drawAgent();
         drawShape();
+        MovePlayer();
+
         hf.drawOptions(agent->_currentBehavior);
         EndDrawing();
     }
