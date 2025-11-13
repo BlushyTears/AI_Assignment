@@ -24,7 +24,7 @@ Agent* agent;
 Player* player;
 
 void instantiateVariables() {
-    agent = new Agent(Vector2{ screenWidth / 2, screenWidth / 6 }, 25.0f, 7.0f);
+    agent = new Agent(Vector2{ screenWidth / 2, screenWidth / 6 }, 25.0f, 5.0f, Vector2{ 0, 0 });
     player = new Player(Vector2{screenWidth / 2, screenWidth / 2}, 25.0f, 8.0f);
 }
 

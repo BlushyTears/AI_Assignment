@@ -33,20 +33,41 @@ struct FleeBehavior : MovementBehavior{
 	void execute(Agent& agent, Player* player) override;
 };
 
+struct SteeringOutput {
+	Vector2 linearVel;
+	float angularVel;
+
+	// Takes in 
+	float newOrientation(float currentAgentOrientation, Vector2 velocity) {
+		if (Vector2Length(velocity) > 0) {
+			return atan2(-velocity.x, velocity.y);
+		}
+		else {
+			return currentAgentOrientation;
+		}
+	}
+};
+
 // Generic agent-related functionality defined here
 struct Agent
 {
 	Vector2 position;
+	Vector2 acceleration;
+	int rotation;
+	Vector2 orientation;
+
 	int radius;
 	float speed;
 	Behaviors _currentBehavior;
 	std::unique_ptr<MovementBehavior> behaviorImpl;
 	Player* playerTarget;
+	SteeringOutput steering;
 
-	Agent(Vector2 pos, int _radius, float _speed) {
+	Agent(Vector2 pos, int initialRadius, float initialSpeed, Vector2 initialOrientation) {
 		position = pos;
-		radius = _radius;
-		speed = _speed;
+		radius = initialRadius;
+		speed = initialSpeed;
+		orientation = initialOrientation;
 		_currentBehavior = Seek;
 		playerTarget = nullptr;
 		behaviorImpl = nullptr;
@@ -88,9 +109,11 @@ struct Agent
 			break;
 		}
 	}
-
+	//cos, -sin, sin, cos
 	void drawAgent() {
 		DrawCircle(position.x, position.y, radius, GREEN);
+		DrawLineV(position, Vector2Add(position, Vector2Scale(orientation, 50)), RED);
+		DrawLineV(position, position + orientation * 50, RED);
 	}
 
 	void TryToChangeState() {
@@ -109,8 +132,16 @@ struct Agent
 */ 
 
 inline void SeekBehavior::execute(Agent& agent, Player* player) {
-	Vector2 dir = Vector2Normalize(Vector2Subtract(player->position, agent.position));
-	agent.position = Vector2Add(agent.position, Vector2Scale(dir, agent.speed));
+	float timeToTarget = 0.25f;
+
+	agent.steering.linearVel = Vector2Normalize(player->position - agent.position);
+	agent.steering.linearVel *= agent.speed;
+
+	agent.acceleration += agent.steering.linearVel;
+	//agent.rotation = agent.steering.newOrientation(agent.rotation, agent.velocity);
+	//agent.orientation += agent.steering.angularVel;
+
+	agent.position += agent.steering.linearVel;
 }
 
 inline void FleeBehavior::execute(Agent& agent, Player* player) {
