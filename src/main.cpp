@@ -24,7 +24,7 @@ Agent* agent;
 Player* player;
 
 void instantiateVariables() {
-    agent = new Agent(Vector2{ screenWidth / 2, screenWidth / 6 }, 25.0f, 5.0f, Vector2{ 0, 0 });
+    agent = new Agent(Vector2{ screenWidth / 2, screenWidth / 6 }, 25.0f, 5.0f, 0);
     player = new Player(Vector2{screenWidth / 2, screenWidth / 2}, 25.0f, 8.0f);
 }
 
@@ -51,11 +51,7 @@ int main(void)
         BeginDrawing();
         ClearBackground(BLACK);
         DrawText(TextFormat("FPS: %d", GetFPS()), 10, 10, 20, RED);
-        agent->setBehavior();
-        agent->updateTarget(player);
-        agent->TryToChangeState();
-        agent->updateBehavior();
-        agent->drawAgent();
+        agent->updateFrame(player);
         drawShape();
         MovePlayer();
 
