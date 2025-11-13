@@ -6,6 +6,7 @@
 
 // First couple of AI movement behaviors defined below
 void SeekBehavior::execute(Agent& agent, Player* player) {
+
 	float smoothRotation = 0.06f;
 	Vector2 toTarget = player->position - agent.position;
 	float desiredRotation = agent.steering.newOrientation(agent.orientation, toTarget);
@@ -45,6 +46,19 @@ void FleeBehavior::execute(Agent& agent, Player* player) {
 	agent.position += agent.velocity;
 }
 
+void ArriveBehavior::execute(Agent& agent, Player* player) {
+	float distance = Vector2Length(player->position - agent.position);
+
+	DrawText(TextFormat("FPS: %.1f ", distance), 10, 30, 20, GREEN);
+
+	if (distance > 200.0f) {
+		SeekBehavior::execute(agent, player);
+	}
+	else {
+		// stand still
+	}
+}
+
 // Generic Agent related:
 float SteeringOutput::newOrientation(float currentAgentOrientation, Vector2 targetObject) {
 	const float eps = 0.001f;
@@ -61,6 +75,8 @@ Agent::Agent(Vector2 pos, int initialRadius, float initialSpeed, float initialOr
 	radius = initialRadius;
 	speed = initialSpeed;
 	orientation = initialOrientation;
+	velocity = { 0, 0 };
+	rotation = { 0, 0 };
 	_currentBehavior = Seek;
 	playerTarget = nullptr;
 	behaviorImpl = nullptr;
@@ -71,7 +87,6 @@ void Agent::updateFrame(Player* plyr) {
 	drawAgent();
 	TryToChangeState();
 	setBehavior();
-		
 	playerTarget = plyr;
 }
 
@@ -98,6 +113,7 @@ void Agent::setBehavior() {
 		break;
 	case Arrive:
 		DrawText("Type: Arrive", 10, GetScreenHeight() - 50, 20, RED);
+		behaviorImpl = std::make_unique<ArriveBehavior>();
 		break;
 	case Wander:
 		DrawText("Type: Wander", 10, GetScreenHeight() - 50, 20, RED);

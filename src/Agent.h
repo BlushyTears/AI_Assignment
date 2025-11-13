@@ -35,9 +35,14 @@ struct FleeBehavior : MovementBehavior{
 	void execute(Agent& agent, Player* player) override;
 };
 
+struct ArriveBehavior : SeekBehavior {
+	void execute(Agent& agent, Player* player) override;
+};
+
 struct SteeringOutput {
 	Vector2 linearVel;
 	float angularVel;
+	// Takes in 
 	float newOrientation(float currentAgentOrientation, Vector2 targetObject);
 };
 
