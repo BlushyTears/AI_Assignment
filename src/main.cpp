@@ -15,8 +15,8 @@
 #include "HelpClass.h"
 #include "Player.h"
 
-const int screenWidth = 1600;
-const int screenHeight = 800;
+const int screenWidth = 1800;
+const int screenHeight = 1000;
 const int squareSize = (screenWidth + screenHeight) / 20;
 
 using namespace std;
@@ -24,19 +24,8 @@ Agent* agent;
 Player* player;
 
 void instantiateVariables() {
-    agent = new Agent(Vector2{ screenWidth / 2, screenWidth / 6 }, 25.0f, 5.0f, 0);
+    agent = new Agent(Vector2{ screenWidth / 2, screenWidth / 6 }, 25.0f, 5.0f, 0, 0.1f, true);
     player = new Player(Vector2{screenWidth / 2, screenWidth / 2}, 25.0f, 8.0f);
-}
-
-void drawShape() {
-    DrawCircle(player->position.x, player->position.y, player->radius, BLUE);
-}
-
-void MovePlayer() {
-    if (IsKeyDown(KEY_W)) player->Move(0, -1);
-    if (IsKeyDown(KEY_A)) player->Move(-1, 0);
-    if (IsKeyDown(KEY_S)) player->Move(0, 1);
-    if (IsKeyDown(KEY_D)) player->Move(1, 0);
 }
 
 int main(void)
@@ -44,7 +33,6 @@ int main(void)
     InitWindow(screenWidth, screenHeight, "AI Assignment");
     SetTargetFPS(60);
     instantiateVariables();
-    HelperFunctions hf;
 
     while (!WindowShouldClose())
     {
@@ -52,10 +40,7 @@ int main(void)
         ClearBackground(BLACK);
         DrawText(TextFormat("FPS: %d", GetFPS()), 10, 10, 20, RED);
         agent->updateFrame(player);
-        drawShape();
-        MovePlayer();
-
-        hf.drawOptions(agent->_currentBehavior);
+        player->Update();
         EndDrawing();
     }
 
