@@ -56,9 +56,9 @@ struct EvadeBehavior : PursueBehavior {
 
 struct WanderBehavior : MovementBehavior {
 	float wanderOrientation = 1.0f;
-	float wanderOffset = 100;
-	float wanderRadius = 25;
-	float wanderRate = 0.1f;
+	float wanderOffset = 250;
+	float wanderRadius = 35;
+	float wanderRate = 1.0f;
 	void execute(Agent& agent, Player* player) override;
 };
 

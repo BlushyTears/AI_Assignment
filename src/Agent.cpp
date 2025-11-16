@@ -119,7 +119,7 @@ void WanderBehavior::execute(Agent& agent, Player* player) {
 	agent.rotationSmoothness = 0.2f;
 	int binomial = GetRandomValue(-1, 1);
 
-	wanderOrientation += float(binomial / wanderRate);
+	wanderOrientation += binomial * wanderRate;
 	float targetOrientation = wanderOrientation + agent.orientation;
 
 	Vector2 target = agent.position + Vector2{ cosf(agent.orientation), sinf(agent.orientation) } * wanderOffset;
@@ -129,7 +129,8 @@ void WanderBehavior::execute(Agent& agent, Player* player) {
 	float desiredRotation = agent.steering.newOrientation(agent.orientation, target - agent.position);
 
 	if (agent.drawDebugLines) {
-		DrawCircle(target.x, target.y, wanderRadius, BLUE);
+		Vector2 sphereDebugLocation = agent.position + agent.forwardDirection * wanderOffset;
+		DrawCircle(sphereDebugLocation.x, sphereDebugLocation.y, wanderRadius, RED);
 		DrawLine(agent.position.x, agent.position.y, target.x, target.y, BLUE);
 	}
 	
@@ -262,30 +263,27 @@ void Agent::displayDebug() {
 	if (IsKeyPressed(KEY_P)) {
 		drawDebugLines = !drawDebugLines;
 	}
-	if (drawDebugLines) {
-		switch (_currentBehavior) {
-		case Seek:
-			DrawText("1/6 Type: Seek", 10, GetScreenHeight() - 50, 20, RED);
-			break;
-		case Flee:
-			DrawText("2/6 Type: Flee", 10, GetScreenHeight() - 50, 20, RED);
-			break;
-		case Pursue:
-			DrawText("3/6 Type: Pursue", 10, GetScreenHeight() - 50, 20, RED);
-			break;
-		case Evade:
-			DrawText("4/6 Type: Evade", 10, GetScreenHeight() - 50, 20, RED);
-			break;
-		case Arrive:
-			DrawText("5/6 Type: Arrive", 10, GetScreenHeight() - 50, 20, RED);
-			break;
-		case Wander:
-			DrawText("6/6 Type: Wander", 10, GetScreenHeight() - 50, 20, RED);
-			break;
-		default:
-			DrawText("Error, most likely invalid option picked", 10, GetScreenHeight(), 20, RED);
-			break;
-		}
+	switch (_currentBehavior) {
+	case Seek:
+		DrawText("1/6 Type: Seek", 10, GetScreenHeight() - 50, 20, RED);
+		break;
+	case Flee:
+		DrawText("2/6 Type: Flee", 10, GetScreenHeight() - 50, 20, RED);
+		break;
+	case Pursue:
+		DrawText("3/6 Type: Pursue", 10, GetScreenHeight() - 50, 20, RED);
+		break;
+	case Evade:
+		DrawText("4/6 Type: Evade", 10, GetScreenHeight() - 50, 20, RED);
+		break;
+	case Arrive:
+		DrawText("5/6 Type: Arrive", 10, GetScreenHeight() - 50, 20, RED);
+		break;
+	case Wander:
+		DrawText("6/6 Type: Wander", 10, GetScreenHeight() - 50, 20, RED);
+		break;
+	default:
+		DrawText("Error, most likely invalid option picked", 10, GetScreenHeight(), 20, RED);
+		break;
 	}
-
 }
