@@ -18,23 +18,23 @@ enum Behaviors {
 
 // Forward declaration but for struct
 struct Agent;
-struct Player;
+struct Object;
 
 // Abstract base class for movement
 // Followed by behavior declarations (C++ thing)
 struct MovementBehavior {
 	virtual ~MovementBehavior() = default;
-	virtual void execute(Agent& agent, Player* player) = 0;
+	virtual void execute(Agent& agent, Object* player) = 0;
 };
 
 struct SeekBehavior : MovementBehavior {
-	virtual Vector2 getTargetDirection(Agent& agent, Player* player);
-	void execute(Agent& agent, Player* player) override;
+	virtual Vector2 getTargetDirection(Agent& agent, Object* player);
+	void execute(Agent& agent, Object* player) override;
 };
 
 struct ArriveBehavior : MovementBehavior {
-	void execute(Agent& agent, Player* player) override;
-	virtual Vector2 getTargetDirection(Agent& agent, Player* player);
+	void execute(Agent& agent, Object* player) override;
+	virtual Vector2 getTargetDirection(Agent& agent, Object* player);
 };
 
 // Note: From the book page 68 it says this:
@@ -43,15 +43,15 @@ struct ArriveBehavior : MovementBehavior {
 // Hence. the design decision to override of getTargetDirection for
 // behaviors that inherit from existing behaviors such as 'flee'.
 struct FleeBehavior : SeekBehavior {
-	Vector2 getTargetDirection(Agent& agent, Player* player) override;
+	Vector2 getTargetDirection(Agent& agent, Object* player) override;
 };
 
 struct PursueBehavior : SeekBehavior {
-	Vector2 getTargetDirection(Agent& agent, Player* player);
+	Vector2 getTargetDirection(Agent& agent, Object* player);
 };
 
 struct EvadeBehavior : PursueBehavior {
-	Vector2 getTargetDirection(Agent& agent, Player* player) override;
+	Vector2 getTargetDirection(Agent& agent, Object* player) override;
 };
 
 struct WanderBehavior : MovementBehavior {
@@ -59,7 +59,7 @@ struct WanderBehavior : MovementBehavior {
 	float wanderOffset = 250;
 	float wanderRadius = 35;
 	float wanderRate = 1.0f;
-	void execute(Agent& agent, Player* player) override;
+	void execute(Agent& agent, Object* player) override;
 };
 
 struct SteeringOutput {
@@ -81,14 +81,14 @@ struct Agent
 	Behaviors _currentBehavior;
 	Behaviors previousBehavior;
 	std::unique_ptr<MovementBehavior> behaviorImpl;
-	Player* playerTarget;
+	Object* playerTarget;
 	SteeringOutput steering;
 	bool drawDebugLines;
 	Agent(Vector2 pos, int initialRadius, float initialSpeed, 
 	float initialOrientation, float initialRotationSmoothness, bool initiallyDrawDebugLines);
 
 	void OutOfBoundsChecker();
-	void updateFrame(Player* plyr);
+	void updateFrame(Object* plyr);
 	void updateBehavior();
 	void setBehavior();
 	void drawAgent();

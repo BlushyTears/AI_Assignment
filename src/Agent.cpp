@@ -5,12 +5,12 @@
 #include "Agent.h"
 
 // This boilerplate purely exists so we can override it
-Vector2 SeekBehavior::getTargetDirection(Agent& agent, Player* player) {
+Vector2 SeekBehavior::getTargetDirection(Agent& agent, Object* player) {
 	return player->position - agent.position;
 }
 
 // First couple of AI movement behaviors defined below
-void SeekBehavior::execute(Agent& agent, Player* player) {
+void SeekBehavior::execute(Agent& agent, Object* player) {
 	agent.rotationSmoothness = 0.2f;
 	Vector2 toTarget = getTargetDirection(agent, player);
 	float desiredRotation = agent.steering.newOrientation(agent.orientation, toTarget);
@@ -31,12 +31,12 @@ void SeekBehavior::execute(Agent& agent, Player* player) {
 }
 
 // Note: FleeBehavior impl just overwrites the targetDirection
-Vector2 FleeBehavior::getTargetDirection(Agent& agent, Player* player) {
+Vector2 FleeBehavior::getTargetDirection(Agent& agent, Object* player) {
 	return agent.position - player->position;
 }
 
 // Pursue inherits from seek but ovewrrites targetDirection with a prediction
-Vector2 PursueBehavior::getTargetDirection(Agent& agent, Player* player) {
+Vector2 PursueBehavior::getTargetDirection(Agent& agent, Object* player) {
 	// Hard Setting rotation smoothness isn't ideal,
 	// but I had to make it react faster when making predictions
 	agent.rotationSmoothness = 0.2f;
@@ -57,8 +57,8 @@ Vector2 PursueBehavior::getTargetDirection(Agent& agent, Player* player) {
 }
 
 // Bit ugly copy paste below, but I didn't realize pursue would need to inherit from seek and then evade inherit from puruse
-// As I only planned this whole architechture to be one layer of inheritence at most
-Vector2 EvadeBehavior::getTargetDirection(Agent& agent, Player* player) {
+// As I only planned this whole architechture to be one layer of inheritence at most for some stupid reason
+Vector2 EvadeBehavior::getTargetDirection(Agent& agent, Object* player) {
 	agent.rotationSmoothness = 0.2f;
 	float maxPrediction = 50.0f;
 	Vector2 toTarget = agent.position - player->position;
@@ -77,11 +77,11 @@ Vector2 EvadeBehavior::getTargetDirection(Agent& agent, Player* player) {
 }
 
 // Note: ArriveBehavior boilerplate
-Vector2 ArriveBehavior::getTargetDirection(Agent& agent, Player* player) {
+Vector2 ArriveBehavior::getTargetDirection(Agent& agent, Object* player) {
 	return player->position - agent.position;
 }
 
-void ArriveBehavior::execute(Agent& agent, Player* player) {
+void ArriveBehavior::execute(Agent& agent, Object* player) {
 	Vector2 direction = player->position - agent.position;
 	float distance = Vector2Length(direction);
 
@@ -99,7 +99,7 @@ void ArriveBehavior::execute(Agent& agent, Player* player) {
 	float slowdownSpeed = agent.speed;
 	if (distance < 200)
 		// The author didn't explain things properly with slowdown, 
-		// so i added a subtraction bias of -2 because agent was moving a tiny bit otherwise
+		// so i added a subtraction bias of -2 because agent was moving a very tiny bit otherwise
 		slowdownSpeed = ((distance / 200) * agent.speed) - 2.0f;
 
 	// Hacky solution to make agent really stop and not crawl (It's a cheat to make the AI appear smart!)
@@ -114,8 +114,10 @@ void ArriveBehavior::execute(Agent& agent, Player* player) {
 	agent.position += agent.velocity;
 }
 
-// Wander unfortunately can't inherit from seek it seems
-void WanderBehavior::execute(Agent& agent, Player* player) {
+// Wander unfortunately can't simply inherit from seek due to 1 line (Author doesn't try to either)
+// Here's the line: float desiredRotation = agent.steering.newOrientation(agent.orientation, target - agent.position);
+// Since seek does: float desiredRotation = agent.steering.newOrientation(agent.orientation, toTarget)
+void WanderBehavior::execute(Agent& agent, Object* player) {
 	agent.rotationSmoothness = 0.2f;
 	int binomial = GetRandomValue(-1, 1);
 
@@ -187,7 +189,7 @@ void Agent::OutOfBoundsChecker() {
 	else if (position.y < 0) position.y = height;
 }
 
-void Agent::updateFrame(Player* plyr) {
+void Agent::updateFrame(Object* plyr) {
 	TryToChangeState();
 	updateBehavior();
 	setBehavior();
