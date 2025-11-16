@@ -190,7 +190,6 @@ void Agent::OutOfBoundsChecker() {
 }
 
 void Agent::updateFrame(Object* plyr) {
-	TryToChangeState();
 	updateBehavior();
 	setBehavior();
 	drawAgent();
@@ -245,15 +244,7 @@ void Agent::setBehavior() {
 	}
 }
 
-void Agent::TryToChangeState() {
-	if (IsKeyPressed(KEY_ONE)) _currentBehavior = Seek;
-	if (IsKeyPressed(KEY_TWO)) _currentBehavior = Flee;
-	if (IsKeyPressed(KEY_THREE)) _currentBehavior = Pursue;
 
-	if (IsKeyPressed(KEY_FOUR)) _currentBehavior = Evade;
-	if (IsKeyPressed(KEY_FIVE)) _currentBehavior = Arrive;
-	if (IsKeyPressed(KEY_SIX)) _currentBehavior = Wander;
-}
 
 void Agent::drawAgent() {
 	DrawCircle(position.x, position.y, radius, GREEN);

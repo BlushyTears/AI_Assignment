@@ -93,6 +93,5 @@ struct Agent
 	void setBehavior();
 	void drawAgent();
 	void displayDebug();
-	void TryToChangeState();
 }; 
 

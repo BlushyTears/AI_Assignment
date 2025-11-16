@@ -30,7 +30,7 @@ struct Object {
     }
 
     virtual void drawShape() {
-        DrawCircle(position.x, position.y, radius, GREEN);
+        DrawCircle(position.x, position.y, radius, DARKGRAY);
     }
 
     Vector2 GetVelocity() const {
