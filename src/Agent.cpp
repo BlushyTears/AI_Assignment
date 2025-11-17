@@ -276,4 +276,12 @@ void Agent::displayDebug() {
 		DrawText("Error, most likely invalid option picked", 10, GetScreenHeight(), 20, RED);
 		break;
 	}
+
+	if (IsKeyPressed(KEY_ONE)) _currentBehavior = Seek;
+	if (IsKeyPressed(KEY_TWO)) _currentBehavior = Flee;
+	if (IsKeyPressed(KEY_THREE)) _currentBehavior = Pursue;
+
+	if (IsKeyPressed(KEY_FOUR)) _currentBehavior = Evade;
+	if (IsKeyPressed(KEY_FIVE)) _currentBehavior = Arrive;
+	if (IsKeyPressed(KEY_SIX)) _currentBehavior = Wander;
 }
