@@ -193,7 +193,6 @@ void Agent::updateFrame(Object* plyr) {
 	updateBehavior();
 	setBehavior();
 	drawAgent();
-	displayDebug();
 	OutOfBoundsChecker();
 	playerTarget = plyr;
 }
@@ -243,8 +242,6 @@ void Agent::setBehavior() {
 		break;
 	}
 }
-
-
 
 void Agent::drawAgent() {
 	DrawCircle(position.x, position.y, radius, GREEN);

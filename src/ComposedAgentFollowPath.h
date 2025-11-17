@@ -40,6 +40,8 @@ struct PathfollowAgent {
 				float y = GetRandomValue(0, height);
 				nodePositions.push_back(Vector2{ x, y });
 			}
+			currentNodeIndex = 0;
+			if (!nodePositions.empty()) obj->position = nodePositions[0];
 		}
 	}
 
@@ -50,9 +52,12 @@ struct PathfollowAgent {
 	void updatePathFollowAgent() {
 		if (nodePositions.size() == 0)
 			return;
+
+		if (currentNodeIndex < 0) currentNodeIndex = 0;
+		if (currentNodeIndex >= (int)nodePositions.size()) currentNodeIndex = 0;
 		Vector2 target = nodePositions[currentNodeIndex];
 
-		if (Vector2Length(agent->position - obj->position) > 10) {
+		if (Vector2Length(agent->position - target) > 10) {
 			agent->updateFrame(obj);
 		}
 		else {
@@ -72,6 +77,12 @@ struct PathfollowAgent {
 		if (nodePositions.size() > 0) {
 			for (int i = 0; i < nodePositions.size(); i++) {
 				DrawCircleLines(nodePositions[i].x, nodePositions[i].y, 10, DARKPURPLE);
+
+				if (i < nodePositions.size() - 1) {
+					DrawLine(nodePositions[i].x, nodePositions[i].y,
+							 nodePositions[i + 1].x, nodePositions[i + 1].y,
+						DARKPURPLE);
+				}
 			}
 		}
 	}

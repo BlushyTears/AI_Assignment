@@ -49,7 +49,7 @@ void update() {
 }
 
 void browseStates() {
-    string temp = "Assignment part: " + to_string(state) + "/3";
+    string temp = "Assignment part: " + to_string(state + 1) + "/3";
     const char* stringState = temp.c_str();
     DrawText(stringState, screenWidth - 250, screenHeight - 50, 20, RED);
 
@@ -61,6 +61,8 @@ void browseStates() {
     }
 
     if (state == 0) {
+        agent->displayDebug();
+
         if (IsKeyPressed(KEY_ONE)) agent->_currentBehavior = Seek;
         if (IsKeyPressed(KEY_TWO)) agent->_currentBehavior = Flee;
         if (IsKeyPressed(KEY_THREE)) agent->_currentBehavior = Pursue;
