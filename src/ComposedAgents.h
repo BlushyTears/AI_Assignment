@@ -8,6 +8,11 @@
 #include "memory.h"
 #include <vector>
 
+// Nomenclature: I refer to the term 'composed agent' throughout, 
+// Which means I have the fundamental agent behaviors in agent.cpp
+// And here I add additional constraints, features such as more agents, obstacles
+// Additionally I could have a composed agent that can do both flee and seek with ease
+// Which was the main design behind this architecture inspired by the book
 enum AgentBehaviors {
 	Pathfollow,
 	Separation,
@@ -98,10 +103,6 @@ struct PathfollowAgent {
 	}
 };
 
-// I asked a question
-struct Separation {
-};
-
 // Avoid other moving into agents based on radius basically
 // I implemented collision separately since a ghost might not have any collision
 // So it made sense to have collision implemented separately
@@ -139,7 +140,7 @@ struct AgentAvoidance {
 		trackedObject->Update();
 	}
 
-	void handleCollision() {
+	virtual void handleCollision() {
 		for (int i = 0; i < agentList.size(); i++) {
 			for (int j = i + 1; j < agentList.size(); j++) {
 				Vector2 diff = agentList[i]->position - agentList[j]->position;
@@ -168,16 +169,101 @@ struct AgentAvoidance {
 	}
 };
 
+// Initially I had the idea of abstracting away the walls into this 
+// But it ended up cluttering it without really adding anything
+struct LineWall {
+	Vector2 start;
+	Vector2 end;
+	Vector2 normal;
+	Vector2 normal2;
+
+	LineWall(Vector2 s, Vector2 e) : start(s), end(e) {
+		Vector2 dir = Vector2Normalize(end - start);
+		normal = Vector2{ -dir.y, dir.x };
+		normal2 = normal * -1;
+	}
+};
+
+// Avoid colliding into other agents as well as walls
+// I had the most problem with this since seek really wants
+// to override the target so the agent often runs through the wall, 
+// but i hope this code highlights the idea at least
+// 
+// This would have been a lot easier if I just made a wall 
+// avoidance seek in agent.cpp so that it wouldn't fight player.h
+// But for some stupid reason I thought making a "Composed Agent" would be more fitting
+struct ObjectAvoidance {
+	std::vector<LineWall> walls;
+	Agent* agent;
+	Player* player;
+
+	const int wallCount = 3;
+	ObjectAvoidance() {
+		agent = new Agent(Vector2{ (float)GetScreenWidth() / 2, (float)GetScreenHeight() / 6 }, 25.0f, 5.0f, 0, 0.1f, true);
+		agent->speed /= 1.5f;
+		player = new Player(Vector2{ (float)GetScreenWidth() / 2, (float)GetScreenHeight() / 2 }, 25.0f, 8.0f);
+
+		walls.push_back(LineWall({ 150, 150 }, {300, 150}));
+		walls.push_back(LineWall({ 500, 400 }, {500, 550}));
+		walls.push_back(LineWall({ 400, 700 }, {550, 750}));
+
+		agent->behaviorImpl = std::make_unique<SeekBehavior>();
+	}
+
+	void update() {
+		agent->updateFrame(player);
+		player->Update();
+		player->drawShape();
+		drawWalls();
+		avoidWalls();
+	}
+
+	void avoidWalls() {
+		float rayLength = 150.0f;
+		Vector2 ray = agent->position + Vector2Normalize(agent->forwardDirection) * rayLength;
+
+		for (int i = 0; i < walls.size(); i++) {
+			Vector2 mid = (walls[i].start + walls[i].end) * 0.5f;
+			Vector2 diff = ray - mid;
+			float dist = Vector2Length(diff);
+
+			if (dist < agent->radius + 50.0f) {
+				float angle = atan2(agent->forwardDirection.y, agent->forwardDirection.x);
+				float side;
+				
+				// Determine which side of the wall we are on
+				if ((diff.x * (walls[i].end.y - walls[i].start.y) - diff.y * (walls[i].end.x - walls[i].start.x)) > 0) {
+					side = 0.15;
+				}
+				else {
+					side = -0.15f;
+				}
+				angle += side;
+				agent->forwardDirection = { cosf(angle), sinf(angle) };
+				agent->orientation = angle;
+			}
+		}
+	}
+
+	void drawWalls() {
+		for (int i = 0; i < walls.size(); i++) {
+			DrawLine(walls[i].start.x, walls[i].start.y, walls[i].end.x, walls[i].end.y, GREEN);
+		}
+	}
+};
+
 // This is the struct that manages the above composed agents
 struct ComposedAgents {
 	AgentBehaviors currentBehavior;
 	PathfollowAgent* pa;
 	AgentAvoidance* agentAvoidance;
+	ObjectAvoidance* collisionAvoidance;
 
 	ComposedAgents() {
 		currentBehavior = Pathfollow;
 		pa = new PathfollowAgent(5); // total node paths
 		agentAvoidance = new AgentAvoidance(5); // total number of agents displayed
+		collisionAvoidance = new ObjectAvoidance();
 	}
 
 	~ComposedAgents() {
@@ -192,10 +278,11 @@ struct ComposedAgents {
 			DrawText("1/3 Type: Pathfollow", 10, GetScreenHeight() - 50, 20, RED);
 			break;
 		case Separation:
-			DrawText("2/3 Type: AgentAvoidance", 10, GetScreenHeight() - 50, 20, RED);
 			agentAvoidance->update();
+			DrawText("2/3 Type: AgentAvoidance", 10, GetScreenHeight() - 50, 20, RED);
 			break;
 		case CollisionAvoidance:
+			collisionAvoidance->update();
 			DrawText("3/3 Type: Collision Avoidance", 10, GetScreenHeight() - 50, 20, RED);
 			break;
 		default:

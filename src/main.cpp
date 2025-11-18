@@ -52,7 +52,7 @@ void update() {
 
 // Note: Move this somewhere else at some point
 void browseStates() {
-    string temp = "Assignment part: " + to_string(assignmentPart + 1) + "/3";
+    string temp = "Assignment part: " + to_string(assignmentPart + 1) + "/2";
     const char* stringState = temp.c_str();
     DrawText(stringState, screenWidth - 250, screenHeight - 50, 20, RED);
 
@@ -60,7 +60,7 @@ void browseStates() {
     if (IsKeyPressed(KEY_LEFT) && assignmentPart != 0) {
         assignmentPart--;
     }
-    else if (IsKeyPressed(KEY_RIGHT) && assignmentPart != 3) {
+    else if (IsKeyPressed(KEY_RIGHT) && assignmentPart != 1) {
         assignmentPart++;
     }
 
