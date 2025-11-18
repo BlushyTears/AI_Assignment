@@ -103,6 +103,8 @@ struct Separation {
 };
 
 // Avoid other moving into agents based on radius basically
+// I implemented collision separately since a ghost might not have any collision
+// So it made sense to have collision implemented separately
 struct AgentAvoidance {
 	std::vector<Agent*> agentList;
 	int numOfAgents;
@@ -151,9 +153,7 @@ struct AgentAvoidance {
 					Vector2 normal = diff / dist;
 
 					float penetration = (minimumDistance - dist) * 0.5f;
-
 					agentList[i]->position += normal * penetration;
-					agentList[j]->position -= normal * penetration;
 				}
 			}
 			agentList[i]->updateFrame(trackedObject);
