@@ -62,6 +62,13 @@ struct WanderBehavior : MovementBehavior {
 	void execute(Agent& agent, Object* player) override;
 };
 
+// The idea is the external caller will calculate the average position of
+// The objects within the cone FOV of this agent, and then this agent will
+// Either perform flee or wander depending on if something is in front or not
+struct ObstacleAndPlayerAvoidanceBehavior : WanderBehavior {
+	void execute(Agent& agent, Object* ObjectToAvoid) override;
+};
+
 struct SteeringOutput {
 	float newOrientation(float currentAgentOrientation, Vector2 targetObject);
 };

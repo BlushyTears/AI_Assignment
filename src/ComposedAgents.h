@@ -15,7 +15,8 @@
 // Which was the main design behind this architecture inspired by the book
 enum AgentBehaviors {
 	Pathfollow,
-	Separation,
+	AgentSeparation,
+	AgentCollision,
 	CollisionAvoidance,
 };
 
@@ -106,14 +107,14 @@ struct PathfollowAgent {
 // Avoid other moving into agents based on radius basically
 // I implemented collision separately since a ghost might not have any collision
 // So it made sense to have collision implemented separately
-struct AgentAvoidance {
+struct SeparatedAgents {
 	std::vector<Agent*> agentList;
 	int numOfAgents;
 	const float agentRadius = 25.0f;
 	Player* trackedObject;
 
 	// Don't remove this agent->behaviorImpl = std::make_unique<SeekBehavior>();
-	AgentAvoidance(int _numOfAgents) {
+	SeparatedAgents(int _numOfAgents) {
 		trackedObject = new Player(Vector2{ (float)GetScreenWidth() / 2, (float)GetScreenHeight() / 3 }, 25.0f, 8.0f);
 
 		numOfAgents = _numOfAgents;
@@ -140,14 +141,14 @@ struct AgentAvoidance {
 		trackedObject->Update();
 	}
 
-	virtual void handleCollision() {
+	void handleCollision() {
 		for (int i = 0; i < agentList.size(); i++) {
 			for (int j = i + 1; j < agentList.size(); j++) {
 				Vector2 diff = agentList[i]->position - agentList[j]->position;
 				float distSq = diff.x * diff.x + diff.y * diff.y;
 
 				float minimumDistance = agentList[i]->radius + agentList[j]->radius;
-				float minimumDistanceSqared = minimumDistance * minimumDistance;
+				float minimumDistanceSqared = minimumDistanceSqared = minimumDistance * minimumDistance;
 
 				if (distSq < minimumDistanceSqared) {
 					float dist = sqrtf(distSq);
@@ -161,7 +162,7 @@ struct AgentAvoidance {
 		}
 	}
 
-	~AgentAvoidance() {
+	~SeparatedAgents() {
 		delete trackedObject;
 		for (int i = 0; i < agentList.size(); i++) {
 			delete agentList[i];
@@ -184,25 +185,20 @@ struct LineWall {
 	}
 };
 
-// Avoid colliding into other agents as well as walls
-// I had the most problem with this since seek really wants
-// to override the target so the agent often runs through the wall, 
-// but i hope this code highlights the idea at least
-// 
-// This would have been a lot easier if I just made a wall 
-// avoidance seek in agent.cpp so that it wouldn't fight player.h
-// But for some stupid reason I thought making a "Composed Agent" would be more fitting
+// This code basically uses the cone implementation from the book by taking three whiskers or raycasts
 struct ObjectAvoidance {
 	std::vector<LineWall> walls;
 	Agent* agent;
 	Player* player;
+	Object* dummyObject;
 
 	const int wallCount = 3;
 	ObjectAvoidance() {
-		agent = new Agent(Vector2{ (float)GetScreenWidth() / 2, (float)GetScreenHeight() / 6 }, 25.0f, 5.0f, 0, 0.1f, true);
-		agent->speed /= 1.5f;
-		player = new Player(Vector2{ (float)GetScreenWidth() / 2, (float)GetScreenHeight() / 2 }, 25.0f, 8.0f);
+		agent = new Agent(Vector2{ (float)GetScreenWidth() / 2, (float)GetScreenHeight() / 6 }, 25.0f, 4.0f, 0, 0.1f, true);
+		agent->rotationSmoothness = 0.06f;
 
+		player = new Player(Vector2{ (float)GetScreenWidth() / 2, (float)GetScreenHeight() / 2 }, 25.0f, 8.0f);
+		dummyObject = new Object(player->position, player->radius, 0);
 		walls.push_back(LineWall({ 150, 150 }, {300, 150}));
 		walls.push_back(LineWall({ 500, 400 }, {500, 550}));
 		walls.push_back(LineWall({ 400, 700 }, {550, 750}));
@@ -219,30 +215,44 @@ struct ObjectAvoidance {
 	}
 
 	void avoidWalls() {
-		float rayLength = 150.0f;
+		float rayLength = 100.0f;
 		Vector2 ray = agent->position + Vector2Normalize(agent->forwardDirection) * rayLength;
+		float fovAngle = 30.0 * DEG2RAD;
+		Vector2 forward = Vector2Normalize(agent->forwardDirection);
+
+		// There are plenty of ways of doing this but i decided to go with 
+		// one bigger raycast in the center and two smaller ones
+		Vector2 whiskers[3] = {
+			agent->position + forward * rayLength,
+			agent->position + Vector2Rotate(forward, +fovAngle) * rayLength / 4,
+			agent->position + Vector2Rotate(forward, -fovAngle) * rayLength / 4,
+		};
+
+		bool hit = false;
+		Vector2 avoidDir = forward;
 
 		for (int i = 0; i < walls.size(); i++) {
 			Vector2 mid = (walls[i].start + walls[i].end) * 0.5f;
-			Vector2 diff = ray - mid;
-			float dist = Vector2Length(diff);
+			float dist = Vector2Distance(ray, mid);
 
-			if (dist < agent->radius + 50.0f) {
-				float angle = atan2(agent->forwardDirection.y, agent->forwardDirection.x);
-				float side;
-				
-				// Determine which side of the wall we are on
-				if ((diff.x * (walls[i].end.y - walls[i].start.y) - diff.y * (walls[i].end.x - walls[i].start.x)) > 0) {
-					side = 0.15;
+			for (int i = 0; i < 3; i++) {
+				float dist = Vector2Distance(whiskers[i], mid);
+				if (dist < agent->radius + 50.0f) {
+					avoidDir = Vector2Normalize(agent->position - mid);
+					hit = true;
+					break;
 				}
-				else {
-					side = -0.15f;
-				}
-				angle += side;
-				agent->forwardDirection = { cosf(angle), sinf(angle) };
-				agent->orientation = angle;
 			}
+			if (hit)
+				break;
 		}
+
+		if (hit) {
+			dummyObject->position = agent->position + avoidDir * rayLength;
+			agent->playerTarget = dummyObject;
+		}
+		else
+			agent->playerTarget = player;
 	}
 
 	void drawWalls() {
@@ -256,34 +266,35 @@ struct ObjectAvoidance {
 struct ComposedAgents {
 	AgentBehaviors currentBehavior;
 	PathfollowAgent* pa;
-	AgentAvoidance* agentAvoidance;
+	SeparatedAgents* separatedAgents;
 	ObjectAvoidance* collisionAvoidance;
 
 	ComposedAgents() {
 		currentBehavior = Pathfollow;
-		pa = new PathfollowAgent(5); // total node paths
-		agentAvoidance = new AgentAvoidance(5); // total number of agents displayed
+		pa = new PathfollowAgent(5); 
+		separatedAgents = new SeparatedAgents(5);
 		collisionAvoidance = new ObjectAvoidance();
 	}
 
 	~ComposedAgents() {
 		delete pa;
-		delete agentAvoidance;
+		delete separatedAgents;
+		delete collisionAvoidance;
 	}
 
 	void displayDebug() {
 		switch (currentBehavior) {
 		case Pathfollow:
 			pa->update();
-			DrawText("1/3 Type: Pathfollow", 10, GetScreenHeight() - 50, 20, RED);
+			DrawText("1/4 Type: Pathfollow", 10, GetScreenHeight() - 50, 20, RED);
 			break;
-		case Separation:
-			agentAvoidance->update();
-			DrawText("2/3 Type: AgentAvoidance", 10, GetScreenHeight() - 50, 20, RED);
+		case AgentSeparation:
+			separatedAgents->update();
+			DrawText("2/4 Type: Separated Agents Behavior", 10, GetScreenHeight() - 50, 20, RED);
 			break;
 		case CollisionAvoidance:
 			collisionAvoidance->update();
-			DrawText("3/3 Type: Collision Avoidance", 10, GetScreenHeight() - 50, 20, RED);
+			DrawText("3/4 Type: Collision, agent and Wall Avoidance", 10, GetScreenHeight() - 50, 20, RED);
 			break;
 		default:
 			DrawText("Error, most likely invalid option picked", 10, GetScreenHeight(), 20, RED);
@@ -293,7 +304,7 @@ struct ComposedAgents {
 
 	void browseStates() {
 		if (IsKeyPressed(KEY_ONE)) currentBehavior = Pathfollow;
-		if (IsKeyPressed(KEY_TWO)) currentBehavior = Separation;
+		if (IsKeyPressed(KEY_TWO)) currentBehavior = AgentSeparation;
 		if (IsKeyPressed(KEY_THREE)) currentBehavior = CollisionAvoidance;
 	}
 };
