@@ -16,8 +16,8 @@
 enum AgentBehaviors {
 	Pathfollow,
 	AgentSeparation,
-	AgentCollision,
 	CollisionAvoidance,
+	AgentJumping,
 };
 
 struct PathfollowAgent {
@@ -32,7 +32,7 @@ struct PathfollowAgent {
 	PathfollowAgent(int _maximumPathCount) {
 		width = GetScreenWidth();
 		height = GetScreenHeight();
-		agent = new Agent(Vector2{ width / 2, height / 6 }, 25.0f, 5.0f, 0, 0.1f, true);
+		agent = new Agent(Vector2{ width / 2, height / 6 }, 15.0f, 5.0f, 0, 0.1f, true);
 		obj = new Object(Vector2{ width / 2, height / 4 }, 25.0f, 5.0f);
 		maximumPathCount = _maximumPathCount;
 		agent->behaviorImpl = std::make_unique<SeekBehavior>();
@@ -69,9 +69,7 @@ struct PathfollowAgent {
 		if (currentNodeIndex >= nodePositions.size()) currentNodeIndex = 0;
 		Vector2 target = nodePositions[currentNodeIndex];
 
-		if (Vector2Length(agent->position - target) > 10) {
-			agent->updateFrame(obj);
-		}
+		if (Vector2Length(agent->position - target) > 10) agent->updateFrame(obj);
 		else {
 			// Increment, then check if it's time to reset, and only after update obj position
 			currentNodeIndex++;
@@ -113,9 +111,10 @@ struct SeparatedAgents {
 	const float agentRadius = 25.0f;
 	Player* trackedObject;
 
-	// Don't remove this agent->behaviorImpl = std::make_unique<SeekBehavior>();
+	// Default constructor
+	SeparatedAgents() : numOfAgents(0), trackedObject(nullptr) {}
 	SeparatedAgents(int _numOfAgents) {
-		trackedObject = new Player(Vector2{ (float)GetScreenWidth() / 2, (float)GetScreenHeight() / 3 }, 25.0f, 8.0f);
+		trackedObject = new Player(Vector2{ (float)GetScreenWidth() / 2, (float)GetScreenHeight() / 3 }, 25.0f, 5.0f);
 
 		numOfAgents = _numOfAgents;
 		for (int i = 0; i < numOfAgents; i++) {
@@ -123,22 +122,26 @@ struct SeparatedAgents {
 			// (If they spawn inside of each other then they'll stay like that)
 			Agent* agent;
 			agent = new Agent(Vector2{ (float)GetScreenWidth() / 2, (float)GetScreenHeight() / 2 + (agentRadius * (i + 1)) },
-				agentRadius, 5.0f, 0, 0.1f, true);
+				agentRadius, 3.0f, 0, 0.1f, true);
 
 			// Set agent behavior (Can vary per agent) (Default behavior is seek but we explicitly define it here)
-			agent->_currentBehavior = Seek;
-			// It's possible to replace the above line with this for instance
-			//if (i % 2 == 0)
-			//	agent->_currentBehavior = Pursue;
-			//else
-			//	agent->_currentBehavior = Evade;
 			agentList.push_back(agent);
 		}
 	}
 
-	void update() {
+	virtual void update() {
 		handleCollision();
+		if (trackedObject) {
+			trackedObject->Update();
+		}
+		for (Agent* a : agentList) {
+			a->updateFrame(trackedObject);
+		}
 		trackedObject->Update();
+	}
+
+	virtual float getMinDistance(int dist1, int dist2) {
+		return (dist1 + dist2) * 2;
 	}
 
 	void handleCollision() {
@@ -147,8 +150,8 @@ struct SeparatedAgents {
 				Vector2 diff = agentList[i]->position - agentList[j]->position;
 				float distSq = diff.x * diff.x + diff.y * diff.y;
 
-				float minimumDistance = agentList[i]->radius + agentList[j]->radius;
-				float minimumDistanceSqared = minimumDistanceSqared = minimumDistance * minimumDistance;
+				float minimumDistance = getMinDistance(agentList[i]->radius, agentList[j]->radius);
+				float minimumDistanceSqared = minimumDistance * minimumDistance;
 
 				if (distSq < minimumDistanceSqared) {
 					float dist = sqrtf(distSq);
@@ -162,7 +165,7 @@ struct SeparatedAgents {
 		}
 	}
 
-	~SeparatedAgents() {
+	virtual ~SeparatedAgents() {
 		delete trackedObject;
 		for (int i = 0; i < agentList.size(); i++) {
 			delete agentList[i];
@@ -175,125 +178,156 @@ struct SeparatedAgents {
 struct LineWall {
 	Vector2 start;
 	Vector2 end;
-	Vector2 normal;
-	Vector2 normal2;
 
-	LineWall(Vector2 s, Vector2 e) : start(s), end(e) {
-		Vector2 dir = Vector2Normalize(end - start);
-		normal = Vector2{ -dir.y, dir.x };
-		normal2 = normal * -1;
-	}
+
+	LineWall(Vector2 s, Vector2 e) : start(s), end(e) {};
 };
 
 // This code basically uses the cone implementation from the book by taking three whiskers or raycasts
-struct ObjectAvoidance {
+// If we hit a wall we just change the target position
+struct ObjectAvoidance : SeparatedAgents {
 	std::vector<LineWall> walls;
-	Agent* agent;
-	Player* player;
 	Object* dummyObject;
 
 	const int wallCount = 3;
-	ObjectAvoidance() {
-		agent = new Agent(Vector2{ (float)GetScreenWidth() / 2, (float)GetScreenHeight() / 6 }, 25.0f, 4.0f, 0, 0.1f, true);
-		agent->rotationSmoothness = 0.06f;
 
-		player = new Player(Vector2{ (float)GetScreenWidth() / 2, (float)GetScreenHeight() / 2 }, 25.0f, 8.0f);
-		dummyObject = new Object(player->position, player->radius, 0);
+	ObjectAvoidance(int numAgents) : SeparatedAgents(numAgents) {
+		dummyObject = new Object(trackedObject->position, trackedObject->radius, 0);
+		// Walls
 		walls.push_back(LineWall({ 150, 150 }, {300, 150}));
 		walls.push_back(LineWall({ 500, 400 }, {500, 550}));
 		walls.push_back(LineWall({ 400, 700 }, {550, 750}));
 
-		agent->behaviorImpl = std::make_unique<SeekBehavior>();
+		// Box aka Object
+		walls.push_back(LineWall({ 800, 200 }, { 1000, 200 }));
+		walls.push_back(LineWall({ 1000, 200 }, { 1000, 350 }));
+		walls.push_back(LineWall({ 1000, 350 }, { 800, 350 }));
+		walls.push_back(LineWall({ 800, 350 }, { 800, 200 }));
 	}
 
-	void update() {
-		agent->updateFrame(player);
-		player->Update();
-		player->drawShape();
-		drawWalls();
+	~ObjectAvoidance() {
+		delete dummyObject;
+	}
+
+	void update() override {
 		avoidWalls();
+
+		SeparatedAgents::update();
+
+		trackedObject->Update();
+		trackedObject->drawShape();
+		drawWalls();
+	}
+
+	float getMinDistance(int dist1, int dist2) override {
+		return dist1 + dist2;
 	}
 
 	void avoidWalls() {
-		float rayLength = 100.0f;
-		Vector2 ray = agent->position + Vector2Normalize(agent->forwardDirection) * rayLength;
-		float fovAngle = 30.0 * DEG2RAD;
-		Vector2 forward = Vector2Normalize(agent->forwardDirection);
+		for (Agent* _a : agentList) {
+			float rayLength = 150.0f;
+			float fovAngle = 45.0 * DEG2RAD;
+			bool raycastHit = false;
 
-		// There are plenty of ways of doing this but i decided to go with 
-		// one bigger raycast in the center and two smaller ones
-		Vector2 whiskers[3] = {
-			agent->position + forward * rayLength,
-			agent->position + Vector2Rotate(forward, +fovAngle) * rayLength / 4,
-			agent->position + Vector2Rotate(forward, -fovAngle) * rayLength / 4,
-		};
+			Vector2 ray = _a->position + Vector2Normalize(_a->forwardDirection) * rayLength;
+			Vector2 forward = Vector2Normalize(_a->forwardDirection);
+			Vector2 avoidDir = forward;
 
-		bool hit = false;
-		Vector2 avoidDir = forward;
+			// There are plenty of ways of doing this but i decided to go with 
+			// one bigger raycast in the center and two smaller ones
+			Vector2 whiskers[3] = {
+				_a->position + forward * rayLength,
+				_a->position + Vector2Rotate(forward, +fovAngle) * rayLength / 2,
+				_a->position + Vector2Rotate(forward, -fovAngle) * rayLength / 2,
+			};
 
-		for (int i = 0; i < walls.size(); i++) {
-			Vector2 mid = (walls[i].start + walls[i].end) * 0.5f;
-			float dist = Vector2Distance(ray, mid);
+			for (int i = 0; i < walls.size(); i++) {
+				Vector2 mid = (walls[i].start + walls[i].end) * 0.5f;
+				float dist = Vector2Distance(ray, mid);
 
-			for (int i = 0; i < 3; i++) {
-				float dist = Vector2Distance(whiskers[i], mid);
-				if (dist < agent->radius + 50.0f) {
-					avoidDir = Vector2Normalize(agent->position - mid);
-					hit = true;
-					break;
+				for (int i = 0; i < 3; i++) {
+					float dist = Vector2Distance(whiskers[i], mid);
+					if (dist < _a->radius + 50.0f) {
+						avoidDir = Vector2Normalize(_a->position - mid);
+						raycastHit = true;
+						break;
+					}
 				}
+				if (raycastHit) break;
 			}
-			if (hit)
-				break;
-		}
 
-		if (hit) {
-			dummyObject->position = agent->position + avoidDir * rayLength;
-			agent->playerTarget = dummyObject;
+			if (raycastHit) {
+				// change target position
+				dummyObject->position = _a->position + avoidDir * rayLength;
+				_a->playerTarget = dummyObject;
+			}
+			else
+				_a->playerTarget = trackedObject;
 		}
-		else
-			agent->playerTarget = player;
 	}
 
 	void drawWalls() {
+		DrawText("- I understand that the agents don't perfectly avoid the box in particular. The main issue is separation sometimes overriding it",
+			200, 10, 20, RED);
+		DrawText("- I think potentially blending the behaviors with weights that the book brings up or just having real collision for the walls would work",
+			200, 40, 20, RED);
+		DrawText("- But if the agents are far enough from the player and move toward one of the box corners it works quite well",
+			200, 70, 20, RED);
+
 		for (int i = 0; i < walls.size(); i++) {
 			DrawLine(walls[i].start.x, walls[i].start.y, walls[i].end.x, walls[i].end.y, GREEN);
 		}
 	}
 };
 
+//struct JumpingAgent {
+//	Agent* agent;
+//	Player* player;
+//
+//	JumpingAgent() {
+//		agent =  
+//	}
+//
+//	~JumpingAgent() {
+//		delete agent;
+//		delete player;
+//	}
+//};
+
 // This is the struct that manages the above composed agents
 struct ComposedAgents {
 	AgentBehaviors currentBehavior;
-	PathfollowAgent* pa;
-	SeparatedAgents* separatedAgents;
-	ObjectAvoidance* collisionAvoidance;
+
+	PathfollowAgent* pathFollowBehavior;
+	SeparatedAgents* separatedAgentsBehavior;
+	ObjectAvoidance* collisionAvoidanceBehavior;
+	//JumpingAgent* jumpingBehavior;
 
 	ComposedAgents() {
 		currentBehavior = Pathfollow;
-		pa = new PathfollowAgent(5); 
-		separatedAgents = new SeparatedAgents(5);
-		collisionAvoidance = new ObjectAvoidance();
+		pathFollowBehavior = new PathfollowAgent(5);
+		separatedAgentsBehavior = new SeparatedAgents(5);
+		collisionAvoidanceBehavior = new ObjectAvoidance(5);
 	}
 
 	~ComposedAgents() {
-		delete pa;
-		delete separatedAgents;
-		delete collisionAvoidance;
+		delete pathFollowBehavior;
+		delete separatedAgentsBehavior;
+		delete collisionAvoidanceBehavior;
 	}
 
 	void displayDebug() {
 		switch (currentBehavior) {
 		case Pathfollow:
-			pa->update();
+			pathFollowBehavior->update();
 			DrawText("1/4 Type: Pathfollow", 10, GetScreenHeight() - 50, 20, RED);
 			break;
 		case AgentSeparation:
-			separatedAgents->update();
+			separatedAgentsBehavior->update();
 			DrawText("2/4 Type: Separated Agents Behavior", 10, GetScreenHeight() - 50, 20, RED);
 			break;
 		case CollisionAvoidance:
-			collisionAvoidance->update();
+			collisionAvoidanceBehavior->update();
 			DrawText("3/4 Type: Collision, agent and Wall Avoidance", 10, GetScreenHeight() - 50, 20, RED);
 			break;
 		default:

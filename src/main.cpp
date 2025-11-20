@@ -21,29 +21,29 @@ const int screenHeight = 1000;
 const int squareSize = (screenWidth + screenHeight) / 20;
 
 using namespace std;
-Agent* agent;
-Player* player;
+Agent* mainAgent;
+Player* mainPlayer;
 
 ComposedAgents* ca;
 int assignmentPart = 0;
 
 void instantiateVariables() {
-    agent = new Agent(Vector2{ screenWidth / 2, screenWidth / 6 }, 25.0f, 5.0f, 0, 0.1f, true);
-    player = new Player(Vector2{screenWidth / 2, screenWidth / 2}, 25.0f, 8.0f);
+    mainAgent = new Agent(Vector2{ screenWidth / 2, screenWidth / 6 }, 25.0f, 5.0f, 0, 0.1f, true);
+    mainPlayer = new Player(Vector2{screenWidth / 2, screenWidth / 2}, 25.0f, 8.0f);
     ca = new ComposedAgents();
 }
 
 // Note agent and player should ALSO deallocate in their deconstructors
 void deallocate() {
-    delete agent;
-    delete player;
+    delete mainAgent;
+    delete mainPlayer;
     delete ca;
 }
 
 void update() {
     if (assignmentPart == 0) {
-        agent->updateFrame(player);
-        player->Update();
+        mainAgent->updateFrame(mainPlayer);
+        mainPlayer->Update();
     }
     else if (assignmentPart == 1) {
         ca->browseStates();
@@ -65,7 +65,7 @@ void browseStates() {
     }
 
     if (assignmentPart == 0) {
-        agent->displayDebug();
+        mainAgent->displayDebug();
     }
     else if (assignmentPart == 1) {
         ca->displayDebug();
