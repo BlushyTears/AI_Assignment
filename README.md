@@ -1,8 +1,10 @@
 # To build:
 
-Double click build-VisualStudio2022.bat in the root folder (Need Visual studio 2022, MSVS compiler), then generate a .sln file, double click that same file, and run it.
+Easy option: Use the binary in bin/Release/AI_Assignment.exe (Double click this!)
 
-Alternatively, for the canvas submission: Navigate to bin/release/AI_assignment.exe
+To run the code: Double click build-VisualStudio2022.bat in the root folder (Need Visual studio 2022, MSVS compiler), then generate a .sln file, double click that same file, and run it.
+
+
 
 # How do navigate:
 
