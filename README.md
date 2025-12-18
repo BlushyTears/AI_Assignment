@@ -1,10 +1,8 @@
 # To build:
 
-Either navigate to bin/Release and double click raylib-quickstart.exe (Build is only x86 ISA so Mac is unlikely to work)
+Double click build-VisualStudio2022.bat in the root folder (Need Visual studio 2022, MSVS compiler), then generate a .sln file, double click that same file, and run it.
 
-# Or:
-
-Double click build-VisualStudio2022.bat in the root folder (Need Visual studio 2022, MSVS compiler)
+Alternatively, for the canvas submission: Navigate to bin/release/AI_assignment.exe
 
 # How do navigate:
 
